@@ -1,0 +1,12 @@
+main = RunDefaultStrategyForObligation
+
+runtimecomplexity = runtimecomplexitypreproc : cpxLowerboundsInductionTechnique
+
+cpxreltrs = runtimecomplexity
+
+cpxLowerboundsInductionTechnique = CpxTrsRenaming:CpxTrsTypeInference:CpxTrsLowerboundsOrder:RunDefaultStrategyForObligation
+
+cpxlowerboundsiterative = CpxTrsLowerbounds[Indefinite = False]:RunDefaultStrategyForObligation
+
+runtimecomplexitypreproc =
+  Repeat(0,*,First(CpxTrsDependencyGraph,CpxTrsNestedDefinedSymbol))

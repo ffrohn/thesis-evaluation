@@ -1,0 +1,32 @@
+main = RunDefaultStrategyForObligation
+
+jbc = BareJBCToJBC : jbcComplexityAbstract
+
+jbcComplexityAbstract =
+  JBCToTerminationGraph[
+    TryNontermProofs=False,
+    TrySeparateMethodAnalysis=False
+  ];
+  jbcITS
+
+jbcITS = jbcEdgesForITS; JBCGraphEdgesToIntTrs[FilterFieldsOfTypeObject=True, PreciseTreeEncoding=False]; jbcIntTrsChain; jbcIntTrsSlice; jbcIntTrsSimplify; WeightedIntTrsToLoAT[Timeout=60,Smt=True]
+
+jbcEdgesForITS =
+      Maybe(SEGraphDataFlow):
+      TerminationGraphToComplexityRuleSet[
+        ApplyAnalyses = "aprove.Framework.Bytecode.Processors.ToSCC.UsedFieldsAnalysis",
+        KeepLeaves=False
+      ]
+
+jbcIntTrsChain = Maybe(WeightedIntTrsStraightLineCodeCompression)
+
+jbcIntTrsSlice =
+    Maybe(WeightedIntTrsUnneededArgumentFilter);
+    Maybe(WeightedIntTrsDuplicateArgumentFilter)
+
+jbcIntTrsSimplify =
+    Maybe(WeightedIntTrsMoveArithmeticFromLhssToConstraints);
+    Maybe(WeightedIntTrsLinearizeLhss);
+    Maybe(WeightedIntTrsRemoveUnsupportedOperators);
+    Maybe(WeightedIntTrsMoveArithmeticFromConstraintsToRhss);
+    Maybe(WeightedIntTrsExprSimplification)

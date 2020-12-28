@@ -1,81 +1,22 @@
-# ========================================================== #
-# ==================== CURRENT STRATEGY ==================== #
-# ====================  FOR COMMON USE  ==================== #
-# ========================================================== #
-
 main = RunDefaultStrategyForObligation
 
+runtimecomplexity = runtimecomplexitypreproc : CpxTrsDecreasingLoop
 
-# ============================================================ #
-# ==================== RUNTIME COMPLEXITY ==================== #
-# ============================================================ #
+cpxreltrs = runtimecomplexity
 
-runtimecomplexity = CpxTrsDecreasingLoop
+runtimecomplexitypreproc =
+  Repeat(0,*,First(CpxTrsDependencyGraph,CpxTrsNestedDefinedSymbol)) :
+  Maybe(CpxRelTrsSTermination)
 
-cpxreltrs = CpxRelTrsSTermination : CpxTrsDecreasingLoop
-
-
-
-
-
-
-
-
-
-
-# runtime complexity via CDT framework
-
-cdt = cdtCleanup : cdtSolve
-
-cdtCleanup = Repeat(0,*,CdtLeafRemoval):
-             Maybe(CdtUnreachable):
-             Maybe(CdtRhsSimplification):
-             Maybe(CdtGraphSplitRhs):
-             Maybe(CdtLeafRemoval):
-             Maybe(CdtKnowledge):
-             Maybe(CdtUsableRules)
-
-cdtSolve = Repeat(0, *,
-             AnyDelay(6000,
-                 cdtRedPair,
-                 First(cdtTransform, cdtMatroRedPair)
-             )
-           )
-
-cdtRedPair = Any(
-               CdtPolyRedPair[OPCSolver = NATTOFORMULA, Range = 1, Degree = 1],
-               CdtPolyRedPair[OPCSolver = NATTOFORMULA, Range = 3, Degree = 1],
-               CdtPolyRedPair[OPCSolver = NATTOFORMULA, Range = 2, Degree = 2],
-               CdtPolyRedPair[OPCSolver = NATTOFORMULA, Range = 1, Degree = 3]
-             ):
-             Maybe(CdtKnowledge)
-
-cdtMatroRedPair = Any(
-                    CdtMatrixRedPair[Engine = MINISAT, Range = 4, Dimension = 2],
-                    CdtMatrixRedPair[Engine = MINISAT, Range = 3, Dimension = 3]
-                  ):
-                  Maybe(CdtKnowledge)
-
-cdtTransform = First(
-                 cdtNarrowing,
-                 Any(
-                   CdtRewriting,
-                   CdtInstantiation,
-                   CdtForwardInstantiation
-                 )
-               ):
-#    = Any(CdtInstantiation, CdtForwardInstantiation, cdtNarrowing, CdtRewriting)
-               Maybe(cdtCleanup)
-
-cdtNarrowing = CdtNarrowing[NormalCheck = True, StrongSubsumes = True]
+# ===================================================== #
+# ============= KEPT FOR TERMINATION OF S ============= #
+# ===================================================== #
 
 cls = CLSSlicing[SCCs=True]:
       CLSToITRS:
       itrs
 
 dio = Diophantine[Range=3, Engine=PICOSAT]
-
-triples = TriplesToPiDP:workOnPiDP
 
 otrs =
     Any(
@@ -771,83 +712,6 @@ relSRSruleremovalRootlab = First(
                                Timer(20000, RelRR[Order = PMatroNat[Engine = MINISAT, Dimension = 3, Range = 1, Collapse = False]])
                              )
                            )
-
-# ==================================================== #
-# ==================== NEW PROLOG ==================== #
-# ==================================================== #
-
-plterm = Maybe(BuiltinConflictTransformation[Complexity = False]) :
-         Any(
-             prologWithoutTransformation,
-             prologWithTransformation,
-             prologWithIntHandling,
-             PrologToTRS[ShowTree = False, ExportTree = False, TreeLimit = 50, MinExSteps = 1, GeneralizationDepth = 7, GeneralizationPosition = 2, MaxBranchingFactor = 3, NoGroundLoss = True]: qtrs,
-			 PrologToIRSwT[ShowTree = False, ExportTree = False, TreeLimit = 50, MinExSteps = 1, GeneralizationDepth = 7, GeneralizationPosition = 2, MaxBranchingFactor = 3, NoGroundLoss = True]: irswtForProlog
-            )
-
-irswtForProlog =
-	IRSwTSimpleDependencyGraph :
-	IntTRSCompressor :
-	Maybe(IRSwTFormatTransformer) : prologIrswtMainLoop
-
-prologIrswtMainLoop =
-     irswtCleanup;
-     First(
-           Solve(IRSwTRemoveTerms[NoSuccIfChanged=True]:irs),
-           Solve(IRSwTRemoveInts[NoSuccIfChanged=True]:IRSwTToQDP:RunDefaultStrategyForObligation),
-           Repeat(1,*,irswtOrders;irswtCleanup),
-          IRSwTToIntTRS:irs
-     ) # First
-
-plcomp = Maybe(BuiltinConflictTransformation[Complexity = True]) : \
-      Maybe(NoRecursion[Complexity = True]) : \
-      Maybe(LPReordering) : \
-      Any(Solve(PrologToCdtProblem[ShowTree = False, ExportTree = False, TreeLimit = 50, MinExSteps = 1, GeneralizationDepth = 7, GeneralizationPosition = 2, MaxBranchingFactor = 3] : cdtforprolog),
-          Solve(PrologToCdtProblem[ShowTree = False, ExportTree = False, TreeLimit = 50, MinExSteps = 2, GeneralizationDepth = 7, GeneralizationPosition = 2, MaxBranchingFactor = 3] : cdtforprolog))
-
-cdtforprolog = Repeat(0,*,ComplexCdtTransformation) : \
-      Solve(cdtCleanup : cdtSolve)
-#      Any( \
-#          prologWithoutTransformation, \
-#          prologWithTransformation, \
-#          prologWithIntHandling \
-#         )
-
-pldet = Maybe(BuiltinConflictTransformation[Complexity = False]) :
-        PrologDeterminacy
-
-workOnPiDP = RepeatS(0,*,First( \
-                               PiDPDependencyGraph, \
-                               PiUsableRules \
-                              )) \
-           : PiDPToQDP : RepeatS(0,*,workOnDPs)
-
-prologWithoutTransformation = Maybe(  Repeat(0,*, First(CallTransformation,NotTransformation,CutElimination,IfThenElseTransformation) )  ) : \
-                              Maybe(FailTransformation) : \
-                              Maybe(UnifyTransformation) : \
-                              Maybe(OrTransformation) : \
-                              Maybe(UndefinedPredicateHandling) : \
-                              Any( \
-                                  Solve(NewPrologToPiTRS[Force = True] : PiDependencyPairs : workOnPiDP), \
-                                  Solve(NewPrologToPiTRS[Force = False] : PiDependencyPairs : workOnPiDP) \
-                                 )
-
-prologWithTransformation = PrologToDTProblem[ShowTree = False, ExportTree = False, TreeLimit = 50, MinExSteps = 2, GeneralizationDepth = 7, GeneralizationPosition = 2, MaxBranchingFactor = 3]: \
-                           Maybe(UndefinedPredicateRemoval) : \
-                           Solve(TriplesToPiDP : workOnPiDP)
-
-prologWithIntHandling = IntegerArithmeticTransformation : \
-                        Maybe(  Repeat(0,*, First(CallTransformation,NotTransformation,CutElimination,IfThenElseTransformation) )  ) : \
-                        Maybe(FailTransformation) : \
-                        Maybe(UnifyTransformation) : \
-                        Maybe(OrTransformation) : \
-                        Maybe(UndefinedPredicateHandling) : \
-                        Any( \
-                            Solve(NewPrologToPiTRS[Force = True] : PiDependencyPairs : workOnPiDP), \
-                            Solve(NewPrologToPiTRS[Force = False] : PiDependencyPairs : workOnPiDP) \
-                           )
-
-
 
 # ================================================= #
 # ==================== HASKELL ==================== #

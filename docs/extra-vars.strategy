@@ -1,0 +1,7 @@
+main = RunDefaultStrategyForObligation
+
+gruntimecomplexity = CpxGTrsExtraVar
+
+runtimecomplexity = Fail
+
+cpxreltrs = Fail

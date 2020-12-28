@@ -1,0 +1,8 @@
+main = RunDefaultStrategyForObligation
+
+runtimecomplexity = runtimecomplexitypreproc : TRSDumpProcessor[OutputDir="./"] : Fail
+
+cpxreltrs = runtimecomplexity
+
+runtimecomplexitypreproc =
+  Repeat(0,*,First(CpxTrsDependencyGraph,CpxTrsNestedDefinedSymbol))
